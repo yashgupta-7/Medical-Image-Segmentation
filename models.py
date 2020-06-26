@@ -7,7 +7,6 @@ Models for U-Net
 
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
 
 def ConvEntity(in_channels, out_channels, kernel_size=3, batch_norm=True, stride=1):
@@ -67,15 +66,18 @@ class RecEntity(nn.Module):
 
 
 def R2Entity(in_channels, out_channels, t=2, kernel_size=3, batch_norm=True, stride=1):
-    fwd = nn.Sequential(
+    fwd1 = nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=1),#, stride=1),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
+            nn.ReLU()
+            )
+
+    fwd2 = nn.Sequential(
             RecEntity(t,out_channels,kernel_size=3, batch_norm=True, stride=1),
             RecEntity(t,out_channels,kernel_size=3, batch_norm=True, stride=1)
             )
     
-    return fwd
+    return lambda a : fwd1(a) + fwd2(a)
     
             
 class U_Net(nn.Module):
@@ -101,28 +103,6 @@ class U_Net(nn.Module):
         ##final               
         layer_dict['final'] = nn.Conv2d(in_channels=nf,out_channels=out_channels,kernel_size=1)
         
-#        self.c1 = ConvEntity(in_channels,nf) # in_channels=3 for rgb images, 1 for grayscale
-#        self.m1 = MaxPoolEntity()
-#        self.c2 = ConvEntity(nf,2*nf)
-#        self.m2 = MaxPoolEntity()
-#        self.c3 = ConvEntity(2*nf,4*nf)
-#        self.m3 = MaxPoolEntity()
-#        self.c4 = ConvEntity(4*nf,8*nf)
-#        self.m4 = MaxPoolEntity()
-#        self.c5 = ConvEntity(8*nf,16*nf)
-#        
-#        ## decoding
-#        self.u1 = UpConvEntity(16*nf,8*nf)
-#        self.c6 = ConvEntity(16*nf,8*nf)
-#        self.u2 = UpConvEntity(8*nf,4*nf)
-#        self.c7 = ConvEntity(8*nf,4*nf)
-#        self.u3 = UpConvEntity(4*nf,2*nf)
-#        self.c8 = ConvEntity(4*nf,2*nf)
-#        self.u4 = UpConvEntity(2*nf,nf)
-#        self.c9 = ConvEntity(2*nf,nf)
-#        
-#        ## final
-#        self.fin = nn.Conv2d(in_channels=nf,out_channels=2,kernel_size=1)
         self.layers = layer_dict
         for k in self.layers.keys():
             self.add_module(k,self.layers[k])
@@ -146,33 +126,6 @@ class U_Net(nn.Module):
         
         a['fin'] = self.layers['final'](a['dec1'])
         
-#        t1 = self.c1(x)
-#        t2 = self.m1(t1)
-#        t3 = self.c2(t2)
-#        t4 = self.m2(t3)
-#        t5 = self.c3(t4)
-#        t6 = self.m3(t5)
-#        t7 = self.c4(t6)
-#        t8 = self.m4(t7)
-#        t9 = self.c5(t8)
-#                             
-#        t10 = self.u1(t9)
-#        t11 = nn.Sequential(nn.Dropout(0.5))(torch.cat((t10, t7), dim=1))
-#        t12 = self.c6(t11)
-#                             
-#        t13 = self.u2(t12)
-#        t14 = nn.Sequential(nn.Dropout(0.5))(torch.cat((t13, t5), dim=1))
-#        t15 = self.c7(t14)
-#                             
-#        t16 = self.u3(t15)
-#        t17 = nn.Sequential(nn.Dropout(0.5))(torch.cat((t16, t3), dim=1))
-#        t18 = self.c8(t17)
-#                             
-#        t19 = self.u4(t18)
-#        t20 = nn.Sequential(nn.Dropout(0.5))(torch.cat((t19, t1), dim=1))
-#        t21 = self.c9(t20)
-#        
-#        t22 = self.fin(t21)
         return F.softmax(a['fin'], dim=1)
     
     def describe(self):
